@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<h1>Hello WebRTC!</h1>
+<button id="initiateBtn">Start Sharing</button>
+<div id="signalingArea">Signaling messages:<br/></div>
+<video id="local" autoplay></video>
+<video id="remote" autoplay></video>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
+<script>
+    const initiateBtn = document.getElementById('initiateBtn');
+    const localVodeoTag = document.getElementById('local');
+    const remoteVideoTag = document.getElementById('remote');
+
+    const signalingArea = document.getElementById('signalingArea');
+
+    const socket = io.connect();
+
+    const rtcPeerConnection = new RTCPeerConnection();
+
+
+    socket.emit('signaling', JSON.stringify({name: 'bob', msg: 'Are you ready for a call?'}));
+
+    socket.on('signaling', (data) => {
+        signalingArea.append(data+'\n');
+    });
+
+
+    // initiateBtn.onclick = (e) => {
+    //     initiator = true;
+    //     socket.emit('initiate');
+    // };
+    //
+    // socket.on('initiate', () => {
+    //     startStream();
+    // });
+    //
+    // rtcPeerConnection.onicecandidate = e => {
+    //     if (e.candidate) {
+    //         rtcPeerConnection.addIceCandidate(e.candidate);
+    //     }
+    // };
+    //
+    // rtcPeerConnection.ontrack = e => {
+    //     remote.srcObject = e.streams[0];
+    // };
+    //
+    // function startStream() {
+    //     navigator.mediaDevices.getUserMedia({
+    //         video: {
+    //             mediaSource: "screen",
+    //             width: {max: '640'},
+    //             height: {max: '480'},
+    //         },
+    //         audio: true,
+    //     })
+    //         .then(stream => {
+    //             // local.srcObject = stream;
+    //             rtcPeerConnection.addStream(stream);
+    //             return rtcPeerConnection.createOffer();
+    //         })
+    //         .then(offer => rtcPeerConnection.setLocalDescription(new RTCSessionDescription(offer)))
+    //         .then(() => socket.emit('offer', JSON.stringify(rtcPeerConnection.localDescription)))
+    //         .then(() => {
+    //             socket.on('accept-offer', (data) => {
+    //                 rtcPeerConnection.setRemoteDescription(JSON.parse(data));
+    //             });
+    //         })
+    //         .catch(console.log);
+    // }
+    //
+    // socket.on('offer', (data) => {
+    //     rtcPeerConnection.setRemoteDescription(JSON.parse(data))
+    //         .then(() => rtcPeerConnection.createAnswer())
+    //         .then(answer => rtcPeerConnection.setLocalDescription(answer))
+    //         .then(() => socket.emit('accept-offer', JSON.stringify(rtcPeerConnection.localDescription)))
+    //         .catch(console.log);
+    // });
+</script>
+
+
+</body>
+</html>

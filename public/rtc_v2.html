@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<h1>Hello WebRTC!</h1>
+<button id="initiateBtn">Start Sharing</button>
+<video id="local" width="160" height="120" autoplay></video>
+<video id="remote" width="160" height="120" autoplay></video>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.1.1/socket.io.js"></script>
+<script>
+    const initiateBtn = document.getElementById('initiateBtn');
+    // const localView = document.getElementById('local');
+    const remoteView = document.getElementById('remote');
+
+    const socket = io.connect();
+
+
+    const constraints = {audio: false, video: true};
+
+    const configuration = {
+        iceServers: [{
+            urls: 'turn:13.250.13.83:3478?transport=udp',
+            username: "YzYNCouZM1mhqhmseWk6",
+            credential: "YzYNCouZM1mhqhmseWk6"
+        }]
+    };
+    const pc = new RTCPeerConnection(configuration);
+
+    initiateBtn.onclick = (e) => {
+        start();
+    };
+
+    // send any ice candidates to the other peer
+    pc.onicecandidate = ({candidate}) => socket.emit('candidate', {candidate});
+
+    // let the "negotiationneeded" event trigger offer generation
+    let negotiating = false;
+
+    pc.onnegotiationneeded = async () => {
+        try {
+            if (negotiating || pc.signalingState !== "stable") return;
+            negotiating = true;
+            await pc.setLocalDescription(await pc.createOffer());
+            // send the offer to the other peer
+            socket.emit('desc', {desc: pc.localDescription});
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    // once remote track media arrives, show it in remote video element
+    pc.ontrack = (event) => {
+        console.log('ontrack');
+        // don't set srcObject again if it is already set.
+        if (remoteView.srcObject) return;
+        remoteView.srcObject = event.streams[0];
+    };
+
+    // call start() to initiate
+    async function start() {
+        console.log('start');
+        try {
+            // get local stream, show it in self-view and add it to be sent
+            // const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            // stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+            pc.addStream(stream);
+            // localView.srcObject = stream;
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    socket.on('desc', async ({desc}) => {
+        try {
+
+            // if we get an offer, we need to reply with an answer
+            if (desc.type === 'offer') {
+                await pc.setRemoteDescription(desc);
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                stream.getTracks().forEach((track) =>
+                    pc.addTrack(track, stream));
+                await pc.setLocalDescription(await pc.createAnswer());
+                socket.emit('desc', {desc: pc.localDescription});
+            } else if (desc.type === 'answer') {
+                await pc.setRemoteDescription(desc);
+            } else {
+                console.log('Unsupported SDP type.');
+            }
+
+        } catch (err) {
+            console.error(err);
+        }
+    });
+
+
+
+    socket.on('candidate', async ({candidate}) => {
+        console.log(candidate);
+        if (!candidate) {
+            return;
+        }
+        try {
+            await pc.addIceCandidate(candidate);
+        } catch (err) {
+            console.error(err);
+        }
+    });
+</script>
+
+
+</body>
+</html>
